@@ -11,7 +11,7 @@ clc; close all; clear
     % Close old serial objects on this port (for very old MATLABs)
     old = instrfind("Port", port); %#ok<INSTRFND>
     if ~isempty(old)
-        try, fclose(old); end %#ok<TRYNC>
+        try fclose(old); end %#ok<TRYNC>
         delete(old);
     end
 
