@@ -1,4 +1,4 @@
-titlesave = "Data\buty1-8_NA" + string(datestr(now, 'yyyymmdd_HHMMSS'));
+titlesave = "Data\AEAR-R012" + string(datestr(now, 'yyyymmdd_HHMMSS'));
 save(titlesave,"t_sec","ax_g","ay_g","az_g")
 
 % ie title name: neo1-8_60A
