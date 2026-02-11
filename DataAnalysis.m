@@ -7,3 +7,8 @@
 % 
 % * run plotLoadedData for each trial, extract damping ratio and other
 %   important aspects
+% 
+% * plot damping ratio as ?bar chart? with subgroups
+%       * Material + thickness
+%       * Same Durometer
+%       * Same Thickness
