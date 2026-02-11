@@ -7,3 +7,5 @@
 % 
 % * run plotLoadedData for each trial, extract damping ratio and other
 %   important aspects
+
+% Tim
