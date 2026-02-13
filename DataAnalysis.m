@@ -72,8 +72,8 @@ for k = 1:numel(files)
     [fn, zeta_HP, eta_HP, zeta_log, eta_log, delta_eta] = compute_eta_zeta_like_reference(x, Fs);
 
 
-    fprintf('%s  fn=%.2f Hz  ζHP=%.4f  ζlog=%.4f  DeltaLoss%%=%.2f\n', ...
-    fileName, fn, zeta_HP, zeta_log, delta_eta);
+    fprintf('%s  fn=%.2f Hz  ζHP=%.4f  ζlog=%.4f ηHP=%.4f ηlog=%.4f DeltaLoss%%=%.2f\n', ...
+    fileName, fn, zeta_HP, zeta_log,eta_HP, eta_log, delta_eta);
 
 
     if currentName == ""
