@@ -21,6 +21,7 @@ close all
 axisToUse = 'Az';   % 'Ax' 'Ay' 'Az'
 Fs = 6400;          % sample rate (Hz)
 
+
 dataDir = fullfile(pwd,'Data');
 files = dir(fullfile(dataDir,'*.mat'));
 
@@ -32,6 +33,8 @@ summary_zeta_log = [];
 summary_eta_log  = [];
 summary_zeta_hp  = [];
 summary_eta_hp   = [];
+summary_zeta = [];
+summary_eta = [];
 
 currentName = "";
 count = 0;
@@ -40,6 +43,7 @@ sum_zeta_log = 0;
 sum_eta_log  = 0;
 sum_zeta_hp  = 0;
 sum_eta_hp   = 0;
+
 
 
 % LOOP THROUGH FILES
@@ -69,6 +73,8 @@ for k = 1:numel(files)
             error('Axis must be Ax, Ay, or Az');
     end
 
+
+
     [fn, zeta_HP, eta_HP, zeta_log, eta_log, delta_eta] = compute_eta_zeta_like_reference(x, Fs);
 
 
@@ -88,6 +94,8 @@ for k = 1:numel(files)
         summary_eta_log(end+1,1)   = sum_eta_log  / count;
         summary_zeta_hp(end+1,1)   = sum_zeta_hp  / count;
         summary_eta_hp(end+1,1)    = sum_eta_hp   / count;
+        summary_zeta(end+1, 1) = ((sum_zeta_log / count)+(sum_zeta_hp  / count))/2;
+        summary_eta(end+1, 1) = ((sum_eta_log / count)+(sum_eta_hp  / count))/2;
 
         % Reset accumulators for the new group
         currentName = name;
@@ -103,6 +111,7 @@ for k = 1:numel(files)
 
 
     count = count + 1;
+
 end
 
 
@@ -112,13 +121,14 @@ if currentName ~= "" && count > 0
     summary_eta_log(end+1,1)   = sum_eta_log  / count;
     summary_zeta_hp(end+1,1)   = sum_zeta_hp  / count;
     summary_eta_hp(end+1,1)    = sum_eta_hp   / count;
+    summary_zeta(end+1, 1) = ((sum_zeta_log / count)+(sum_zeta_hp  / count))/2;
+    summary_eta(end+1, 1) = ((sum_eta_log / count)+(sum_eta_hp  / count))/2;
 end
 
 avgTable = table( ...
-    summary_names, summary_zeta_log, summary_eta_log, summary_zeta_hp, summary_eta_hp, ...
-    'VariableNames', {'name','zeta_log','eta_log','zeta_hp','eta_hp'} );
+    summary_names, summary_zeta_log, summary_eta_log, summary_zeta_hp, summary_eta_hp, summary_zeta, summary_eta, ...
+    'VariableNames', {'name','zeta_log','eta_log','zeta_hp','eta_hp', 'zeta', 'eta'} );
 
-disp('===== AVERAGES PER NAME =====');
 disp(avgTable);
 
 
@@ -173,6 +183,8 @@ function [peak_f, zeta_hp, eta_hp, zeta_log, eta_log, delta_eta] = compute_eta_z
     df = f2 - f1;
     eta_hp  = df / peak_f;
     zeta_hp = df / (2*peak_f);
+
+
 
     %% ==========================
     %  LOGARITHMIC DECREMENT (time domain)
