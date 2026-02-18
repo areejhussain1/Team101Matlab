@@ -27,6 +27,7 @@ files = dir(fullfile(dataDir,'*.mat'));
 
 results = [];   % [fileIndex  peakFreq  zeta_HP  eta_HP  zeta_log  eta_log]
 
+R = struct();   % results grouped by name
 
 summary_names = strings(0,1);
 summary_zeta_log = [];
@@ -77,6 +78,28 @@ for k = 1:numel(files)
 
     [fn, zeta_HP, eta_HP, zeta_log, eta_log, delta_eta] = compute_eta_zeta_like_reference(x, Fs);
 
+    key = matlab.lang.makeValidName(name);   % sanitize for fieldname (e.g. "rub", "SCPOLY")
+
+% Initialize this name bucket once
+if ~isfield(R, key)
+    R.(key).file       = strings(0,1);
+    R.(key).fn         = [];
+    R.(key).zeta_HP    = [];
+    R.(key).eta_HP     = [];
+    R.(key).zeta_log   = [];
+    R.(key).eta_log    = [];
+    R.(key).delta_eta  = [];
+end
+
+% Append one row/entry for this file
+R.(key).file(end+1,1)      = string(fileName);
+R.(key).fn(end+1,1)        = fn;
+R.(key).zeta_HP(end+1,1)   = zeta_HP;
+R.(key).eta_HP(end+1,1)    = eta_HP;
+R.(key).zeta_log(end+1,1)  = zeta_log;
+R.(key).eta_log(end+1,1)   = eta_log;
+R.(key).delta_eta(end+1,1) = delta_eta;
+
 
     fprintf('%s  fn=%.2f Hz  ζHP=%.4f  ζlog=%.4f ηHP=%.4f ηlog=%.4f DeltaLoss%%=%.2f\n', ...
     fileName, fn, zeta_HP, zeta_log,eta_HP, eta_log, delta_eta);
@@ -125,13 +148,103 @@ if currentName ~= "" && count > 0
     summary_eta(end+1, 1) = ((sum_eta_log / count)+(sum_eta_hp  / count))/2;
 end
 
+%avgTable = table( ...
+%    summary_names, summary_zeta_log, summary_eta_log, summary_zeta_hp, summary_eta_hp, summary_zeta, summary_eta, ...
+%    'VariableNames', {'name','zeta_log','eta_log','zeta_hp','eta_hp',
+%    'zeta', 'eta'} );%
+%disp(avgTable);
+
+keys = string(fieldnames(R));
+nG = numel(keys);
+
+summary_names = strings(nG,1);
+summary_zeta_log = nan(nG,1);
+summary_eta_log  = nan(nG,1);
+summary_zeta_hp  = nan(nG,1);
+summary_eta_hp   = nan(nG,1);
+summary_zeta     = nan(nG,1);
+summary_eta      = nan(nG,1);
+
+for i = 1:nG
+    k = keys(i);
+    summary_names(i)    = k;
+
+    summary_zeta_log(i) = mean(R.(k).zeta_log, 'omitnan');
+    summary_eta_log(i)  = mean(R.(k).eta_log,  'omitnan');
+    summary_zeta_hp(i)  = mean(R.(k).zeta_HP,  'omitnan');
+    summary_eta_hp(i)   = mean(R.(k).eta_HP,   'omitnan');
+
+    summary_zeta(i) = mean([summary_zeta_log(i), summary_zeta_hp(i)], 'omitnan');
+    summary_eta(i)  = mean([summary_eta_log(i),  summary_eta_hp(i)],  'omitnan');
+end
+
 avgTable = table( ...
     summary_names, summary_zeta_log, summary_eta_log, summary_zeta_hp, summary_eta_hp, summary_zeta, summary_eta, ...
-    'VariableNames', {'name','zeta_log','eta_log','zeta_hp','eta_hp', 'zeta', 'eta'} );
+    'VariableNames', {'name','zeta_log','eta_log','zeta_hp','eta_hp','zeta','eta'} );
 
 disp(avgTable);
 
+keys = string(fieldnames(R));
+G = numel(keys);
 
+name_out = strings(G,1);
+
+hp_n  = zeros(G,1);  hp_mu  = nan(G,1);  hp_lo  = nan(G,1);  hp_hi  = nan(G,1);
+log_n = zeros(G,1);  log_mu = nan(G,1);  log_lo = nan(G,1);  log_hi = nan(G,1);
+avg_n = zeros(G,1);  avg_mu = nan(G,1);  avg_lo = nan(G,1);  avg_hi = nan(G,1);
+
+for i = 1:G
+    key = keys(i);
+    name_out(i) = key;
+
+    zhp  = R.(key).zeta_HP(:);
+    zlog = R.(key).zeta_log(:);
+
+    % Per-sample average of the two (robust to NaNs)
+    zavg = mean([zhp, zlog], 2, 'omitnan');
+
+    [hp_mu(i),  hp_lo(i),  hp_hi(i),  hp_n(i)]  = mean_ci95(zhp);
+    [log_mu(i), log_lo(i), log_hi(i), log_n(i)] = mean_ci95(zlog);
+    [avg_mu(i), avg_lo(i), avg_hi(i), avg_n(i)] = mean_ci95(zavg);
+end
+
+statsTable = table( ...
+    name_out, ...
+      hp_mu,  hp_lo,  hp_hi, ...
+     log_mu, log_lo, log_hi, ...
+     avg_n, avg_mu, avg_lo, avg_hi, (avg_hi-avg_lo), ...
+    'VariableNames', { ...
+      'name', ...
+      'zeta_hp_mean','zeta_hp_ci_lo','zeta_hp_ci_hi', ...
+      'zeta_log_mean','zeta_log_ci_lo','zeta_log_ci_hi', ...
+      'avg_n','zeta_avg_mean','zeta_avg_ci_lo','zeta_avg_ci_hi','zeta_avg_ci_width' } );
+
+disp(statsTable);
+
+
+
+
+function [mu, lo, hi, n] = mean_ci95(x)
+    x = x(:);
+    x = x(~isnan(x));   % ignore NaNs
+    n = numel(x);
+
+    if n == 0
+        mu = NaN; lo = NaN; hi = NaN;
+        return
+    elseif n == 1
+        mu = x;
+        lo = NaN; hi = NaN;   % can't form CI with 1 sample
+        return
+    end
+
+    mu = mean(x);
+    s  = std(x, 0);           % sample std (N-1)
+    se = s / sqrt(n);
+    tcrit = tinv(0.975, n-1); % 95% two-sided
+    lo = mu - tcrit*se;
+    hi = mu + tcrit*se;
+end
 
 
 function [peak_f, zeta_hp, eta_hp, zeta_log, eta_log, delta_eta] = compute_eta_zeta_like_reference(x, Fs)
