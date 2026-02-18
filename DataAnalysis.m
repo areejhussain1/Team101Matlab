@@ -1,13 +1,13 @@
 % This file will Analyze all the experimental data
-% 
+%
 % * look at all the data in data/
-% 
+%
 % * combine (N) different trials of the same material into a [4xN] matrix
 %   or a struct based on naming convention
-% 
+%
 % * run plotLoadedData for each trial, extract damping ratio and other
 %   important aspects
-% 
+%
 % * produce an avg table per material name (grouped by naming convention)
 % * ALSO store every individual trial in a struct array "tests" (Option A)
 
@@ -74,29 +74,29 @@ for k = 1:numel(files)
 
     key = matlab.lang.makeValidName(name);   % sanitize for fieldname (e.g. "rub", "SCPOLY")
 
-% Initialize this name bucket once
-if ~isfield(R, key)
-    R.(key).file       = strings(0,1);
-    R.(key).fn         = [];
-    R.(key).zeta_HP    = [];
-    R.(key).eta_HP     = [];
-    R.(key).zeta_log   = [];
-    R.(key).eta_log    = [];
-    R.(key).delta_eta  = [];
-end
+    % Initialize this name bucket once
+    if ~isfield(R, key)
+        R.(key).file       = strings(0,1);
+        R.(key).fn         = [];
+        R.(key).zeta_HP    = [];
+        R.(key).eta_HP     = [];
+        R.(key).zeta_log   = [];
+        R.(key).eta_log    = [];
+        R.(key).delta_eta  = [];
+    end
 
-% Append one row/entry for this file
-R.(key).file(end+1,1)      = string(fileName);
-R.(key).fn(end+1,1)        = fn;
-R.(key).zeta_HP(end+1,1)   = zeta_HP;
-R.(key).eta_HP(end+1,1)    = eta_HP;
-R.(key).zeta_log(end+1,1)  = zeta_log;
-R.(key).eta_log(end+1,1)   = eta_log;
-R.(key).delta_eta(end+1,1) = delta_eta;
+    % Append one row/entry for this file
+    R.(key).file(end+1,1)      = string(fileName);
+    R.(key).fn(end+1,1)        = fn;
+    R.(key).zeta_HP(end+1,1)   = zeta_HP;
+    R.(key).eta_HP(end+1,1)    = eta_HP;
+    R.(key).zeta_log(end+1,1)  = zeta_log;
+    R.(key).eta_log(end+1,1)   = eta_log;
+    R.(key).delta_eta(end+1,1) = delta_eta;
 
 
     fprintf('%s  fn=%.2f Hz  ζHP=%.4f  ζlog=%.4f ηHP=%.4f ηlog=%.4f DeltaLoss%%=%.2f\n', ...
-    fileName, fn, zeta_HP, zeta_log,eta_HP, eta_log, delta_eta);
+        fileName, fn, zeta_HP, zeta_log,eta_HP, eta_log, delta_eta);
 
 
     if currentName == ""
@@ -204,15 +204,15 @@ end
 
 statsTable = table( ...
     name_out, ...
-      hp_mu,  hp_lo,  hp_hi, ...
-     log_mu, log_lo, log_hi, ...
-     avg_n, avg_mu, avg_lo, avg_hi, (avg_hi-avg_lo), ...
+    hp_mu,  hp_lo,  hp_hi, ...
+    log_mu, log_lo, log_hi, ...
+    avg_n, avg_mu, avg_lo, avg_hi, (avg_hi-avg_lo), ...
     'VariableNames', { ...
-      'name', ...
-      'zeta_hp_mean','zeta_hp_ci_lo','zeta_hp_ci_hi', ...
-      'zeta_log_mean','zeta_log_ci_lo','zeta_log_ci_hi', ...
-      'avg_n','zeta_avg_mean','zeta_avg_ci_lo','zeta_avg_ci_hi','zeta_avg_ci_width' } );
-%% 
+    'name', ...
+    'zeta_hp_mean','zeta_hp_ci_lo','zeta_hp_ci_hi', ...
+    'zeta_log_mean','zeta_log_ci_lo','zeta_log_ci_hi', ...
+    'avg_n','zeta_avg_mean','zeta_avg_ci_lo','zeta_avg_ci_hi','zeta_avg_ci_width' } );
+%%
 
 disp(statsTable);
 
@@ -254,8 +254,8 @@ for i = 1:G
     vals = [zhp; zlog; zavg];
     g    = [ones(numel(zhp),1); 2*ones(numel(zlog),1); 3*ones(numel(zavg),1)];
 
-        boxchart(g, vals);
-  
+    boxchart(g, vals);
+
 
     set(gca, 'XTick', 1:3, 'XTickLabel', {'HP','LOG','AVG'});
 
@@ -317,26 +317,40 @@ for i = 1:numel(x)
         'Color', cols(i,:));   % sets the vertical CI line color too
     % After you've computed mu, lo, hi, x, cols, etc.
 
-yRange = max(hi) - min(lo);
-if yRange == 0 || isnan(yRange)
-    yRange = 1; % fallback
-end
-dy = 0.02 * yRange;   % small vertical offset above the CI cap
+    yRange = max(hi) - min(lo);
+    if yRange == 0 || isnan(yRange)
+        yRange = 1; % fallback
+    end
+    dy = 0.02 * yRange;   % small vertical offset above the CI cap
 
-for i = 1:N
-    h(i) = errorbar(x(i), mu(i), mu(i)-lo(i), hi(i)-mu(i), 'o', ...
-        'LineStyle','none', 'LineWidth',1.5, 'CapSize',10, ...
-        'MarkerFaceColor', cols(i,:), 'MarkerEdgeColor', cols(i,:), ...
-        'Color', cols(i,:));
+    for i = 1:N
+        h(i) = errorbar(x(i), mu(i), mu(i)-lo(i), hi(i)-mu(i), 'o', ...
+            'LineStyle','none', 'LineWidth',1.5, 'CapSize',10, ...
+            'MarkerFaceColor', cols(i,:), 'MarkerEdgeColor', cols(i,:), ...
+            'Color', cols(i,:));
 
-    % Vertical label at the top of the error bar
-    text(x(i), lo(i) - dy, string(statsTable.name(i)), ...
-        'Rotation', 90, ...
-        'HorizontalAlignment', 'right', ...
-        'VerticalAlignment', 'middle', ...
-        'Interpreter', 'none', ...
-        'FontSize', 12);
-end
+        % Vertical label at the bottom of the error bar
+        text(x(i), lo(i) - dy, string(statsTable.name(i)), ...
+            'Rotation', 90, ...
+            'HorizontalAlignment', 'right', ...
+            'VerticalAlignment', 'middle', ...
+            'Interpreter', 'none', ...
+            'FontSize', 12);
+        % --- Mean value callout (near the marker at y = mu(i)) ---
+        dx = 0.08;                 % horizontal offset in x units (tweak)
+        dy_mu = 0.00 * yRange;     % vertical offset (tweak)
+
+        text(x(i) + dx, mu(i) + dy_mu, sprintf('%.4f', mu(i)), ...
+            'Interpreter','none', ...
+            'FontSize', 8, ...
+            'Color', cols(i,:), ...
+            'BackgroundColor', 'w', ...
+            'EdgeColor', cols(i,:), ...
+            'Margin', 2, ...
+            'HorizontalAlignment', 'left', ...
+            'VerticalAlignment', 'middle');
+
+    end
 
 end
 ylim([0, max(hi) + 0.2*yRange]);
@@ -359,156 +373,156 @@ hold off;
 
 
 function [mu, lo, hi, n] = mean_ci95(x)
-    x = x(:);
-    x = x(~isnan(x));   % ignore NaNs
-    n = numel(x);
+x = x(:);
+x = x(~isnan(x));   % ignore NaNs
+n = numel(x);
 
-    if n == 0
-        mu = NaN; lo = NaN; hi = NaN;
-        return
-    elseif n == 1
-        mu = x;
-        lo = NaN; hi = NaN;   % can't form CI with 1 sample
-        return
-    end
+if n == 0
+    mu = NaN; lo = NaN; hi = NaN;
+    return
+elseif n == 1
+    mu = x;
+    lo = NaN; hi = NaN;   % can't form CI with 1 sample
+    return
+end
 
-    mu = mean(x);
-    s  = std(x, 0);           % sample std (N-1)
-    se = s / sqrt(n);
-    tcrit = tinv(0.975, n-1); % 95% two-sided
-    lo = mu - tcrit*se;
-    hi = mu + tcrit*se;
+mu = mean(x);
+s  = std(x, 0);           % sample std (N-1)
+se = s / sqrt(n);
+tcrit = tinv(0.975, n-1); % 95% two-sided
+lo = mu - tcrit*se;
+hi = mu + tcrit*se;
 end
 
 
 function [peak_f, zeta_hp, eta_hp, zeta_log, eta_log, delta_eta] = compute_eta_zeta_like_reference(x, Fs)
-    % Make x column
-    x = x(:);
-    N = numel(x);
-    if N < 2
-        peak_f = NaN; zeta_hp = NaN; eta_hp = NaN; zeta_log = NaN; eta_log = NaN; delta_eta = NaN;
-        return;
-    end
+% Make x column
+x = x(:);
+N = numel(x);
+if N < 2
+    peak_f = NaN; zeta_hp = NaN; eta_hp = NaN; zeta_log = NaN; eta_log = NaN; delta_eta = NaN;
+    return;
+end
 
-    % --- Reconstruct uniform time vector (reference does this) ---
-    t_sec = (0:N-1).' / Fs;
+% --- Reconstruct uniform time vector (reference does this) ---
+t_sec = (0:N-1).' / Fs;
 
-    % --- Remove DC offset (reference uses x_detrend) ---
-    x_detrend = x - mean(x);
+% --- Remove DC offset (reference uses x_detrend) ---
+x_detrend = x - mean(x);
 
-    %% ==========================
-    %  HALF-POWER METHOD (FFT)
-    %  ==========================
-    w  = hann(N);
-    xw = x_detrend .* w;
+%% ==========================
+%  HALF-POWER METHOD (FFT)
+%  ==========================
+w  = hann(N);
+xw = x_detrend .* w;
 
-    X  = fft(xw);
+X  = fft(xw);
 
-    % Reference scaling: P2 = abs(X)/N, then single-sided with doubling
-    P2 = abs(X) / N;                    % two-sided
-    P1 = P2(1:floor(N/2)+1);            % single-sided
-    if numel(P1) > 2
-        P1(2:end-1) = 2*P1(2:end-1);
-    end
+% Reference scaling: P2 = abs(X)/N, then single-sided with doubling
+P2 = abs(X) / N;                    % two-sided
+P1 = P2(1:floor(N/2)+1);            % single-sided
+if numel(P1) > 2
+    P1(2:end-1) = 2*P1(2:end-1);
+end
 
-    f = Fs*(0:floor(N/2))/N;
+f = Fs*(0:floor(N/2))/N;
 
-    [max_mag, i_peak] = max(P1);
-    peak_f = f(i_peak);
+[max_mag, i_peak] = max(P1);
+peak_f = f(i_peak);
 
-    hp_mag = max_mag / sqrt(2);
+hp_mag = max_mag / sqrt(2);
 
-    % Reference half-power crossing selection
-    % NOTE: left uses hp_mag*0.95 in the reference
-    [~, i_left] = min(abs(P1(1:i_peak) - hp_mag*0.95));
-    f1 = f(i_left);
+% Reference half-power crossing selection
+% NOTE: left uses hp_mag*0.95 in the reference
+[~, i_left] = min(abs(P1(1:i_peak) - hp_mag*0.95));
+f1 = f(i_left);
 
-    [~, i_right_rel] = min(abs(P1(i_peak:end) - hp_mag));
-    i_right = i_peak + i_right_rel - 1;
-    f2 = f(i_right);
+[~, i_right_rel] = min(abs(P1(i_peak:end) - hp_mag));
+i_right = i_peak + i_right_rel - 1;
+f2 = f(i_right);
 
-    df = f2 - f1;
-    eta_hp  = df / peak_f;
-    zeta_hp = df / (2*peak_f);
+df = f2 - f1;
+eta_hp  = df / peak_f;
+zeta_hp = df / (2*peak_f);
 
 
 
-    %% ==========================
-    %  LOGARITHMIC DECREMENT (time domain)
-    %  ==========================
-    % Reference uses signed peaks on x_detrend, not abs envelope
+%% ==========================
+%  LOGARITHMIC DECREMENT (time domain)
+%  ==========================
+% Reference uses signed peaks on x_detrend, not abs envelope
 
-    if peak_f <= 0 || isnan(peak_f)
+if peak_f <= 0 || isnan(peak_f)
+    zeta_log = NaN; eta_log = NaN;
+else
+    % Estimate period from peak frequency
+    Tn = 1 / peak_f;
+
+    % Peak detection: enforce min spacing
+    minPeakDist_sec = 0.5 * Tn;
+    [x_peaks, locs] = findpeaks(x_detrend, t_sec, 'MinPeakDistance', minPeakDist_sec);
+
+    if numel(x_peaks) < 3
         zeta_log = NaN; eta_log = NaN;
     else
-        % Estimate period from peak frequency
-        Tn = 1 / peak_f;
+        % --- Handle clipping at the start (reference logic) ---
+        clip_level = max(abs(x_detrend));
+        tol = 1e-3 * clip_level;
 
-        % Peak detection: enforce min spacing
-        minPeakDist_sec = 0.5 * Tn;
-        [x_peaks, locs] = findpeaks(x_detrend, t_sec, 'MinPeakDistance', minPeakDist_sec);
+        clip_idx = find(abs(x_detrend) >= clip_level - tol);
+        if ~isempty(clip_idx)
+            t_clip_end = t_sec(clip_idx(end));
+            keep_clip  = locs > t_clip_end;
+            x_peaks_u  = x_peaks(keep_clip);
+            locs_u     = locs(keep_clip);
+        else
+            x_peaks_u = x_peaks;
+            locs_u    = locs;
+        end
 
-        if numel(x_peaks) < 3
+        % --- 1) Apply magnitude threshold (reference uses 5 g in your pasted code) ---
+        A_mag = abs(x_peaks_u);
+        keep_big = A_mag >= 5;
+        A1 = A_mag(keep_big);
+
+        if numel(A1) < 2
             zeta_log = NaN; eta_log = NaN;
         else
-            % --- Handle clipping at the start (reference logic) ---
-            clip_level = max(abs(x_detrend));
-            tol = 1e-3 * clip_level;
+            % --- 2) Remove neighbor-outlier peaks (reference alpha=0.8) ---
+            alpha = 0.8;
+            keep_neighbor = true(size(A1));
 
-            clip_idx = find(abs(x_detrend) >= clip_level - tol);
-            if ~isempty(clip_idx)
-                t_clip_end = t_sec(clip_idx(end));
-                keep_clip  = locs > t_clip_end;
-                x_peaks_u  = x_peaks(keep_clip);
-                locs_u     = locs(keep_clip);
-            else
-                x_peaks_u = x_peaks;
-                locs_u    = locs;
-            end
-
-            % --- 1) Apply magnitude threshold (reference uses 5 g in your pasted code) ---
-            A_mag = abs(x_peaks_u);
-            keep_big = A_mag >= 5;
-            A1 = A_mag(keep_big);
-
-            if numel(A1) < 2
-                zeta_log = NaN; eta_log = NaN;
-            else
-                % --- 2) Remove neighbor-outlier peaks (reference alpha=0.8) ---
-                alpha = 0.8;
-                keep_neighbor = true(size(A1));
-
-                if numel(A1) >= 3
-                    for k = 2:numel(A1)-1
-                        neighbor_min = min(A1(k-1), A1(k+1));
-                        if A1(k) < alpha * neighbor_min
-                            keep_neighbor(k) = false;
-                        end
+            if numel(A1) >= 3
+                for k = 2:numel(A1)-1
+                    neighbor_min = min(A1(k-1), A1(k+1));
+                    if A1(k) < alpha * neighbor_min
+                        keep_neighbor(k) = false;
                     end
                 end
+            end
 
-                A = A1(keep_neighbor);
+            A = A1(keep_neighbor);
 
-                if numel(A) < 2
-                    zeta_log = NaN; eta_log = NaN;
-                else
-                    deltas = log(A(1:end-1) ./ A(2:end));
-                    delta_bar = mean(deltas);
+            if numel(A) < 2
+                zeta_log = NaN; eta_log = NaN;
+            else
+                deltas = log(A(1:end-1) ./ A(2:end));
+                delta_bar = mean(deltas);
 
-                    zeta_log = delta_bar / sqrt(4*pi^2 + delta_bar^2);
-                    eta_log  = 2 * zeta_log;
-                end
+                zeta_log = delta_bar / sqrt(4*pi^2 + delta_bar^2);
+                eta_log  = 2 * zeta_log;
             end
         end
     end
+end
 
-    %% ==========================
-    %  ERROR CALC (reference)
-    %  ==========================
-    % reference: delta_eta = abs(eta_hp - eta_log)/eta_log * 100;
-    if isnan(eta_log) || eta_log == 0
-        delta_eta = NaN;
-    else
-        delta_eta = abs(eta_hp - eta_log) / eta_log * 100;
-    end
+%% ==========================
+%  ERROR CALC (reference)
+%  ==========================
+% reference: delta_eta = abs(eta_hp - eta_log)/eta_log * 100;
+if isnan(eta_log) || eta_log == 0
+    delta_eta = NaN;
+else
+    delta_eta = abs(eta_hp - eta_log) / eta_log * 100;
+end
 end
