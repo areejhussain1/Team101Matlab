@@ -255,12 +255,26 @@ plot_material_ci_filtered(statsTable, idxKeep, ...
     'ShowXTicks', false, ...
     'FontSizeName', 12, ...
     'FontSizeMu', 8);
+%%
+
+
+
+idxKeep = ismember(string(statsTable.name), ["AEAR_R012","AEAR_SD125","AEAR_SD40AL","AEAR_blue_cured","AEAR_blue","bare"]);  
+
+plot_material_ci_filtered(statsTable, idxKeep, ...
+    'FigureName', 'All AEARO Materials: AVG mean \pm 95% CI (sorted)', ...
+    'BlockSize', 7, ...
+    'ShowXTicks', false, ...
+    'FontSizeName', 12, ...
+    'FontSizeMu', 8);
 
 
 %% =========================
 % FUNCTIONS
 %% =========================
 
+% PLOTS A FILTERED SET OF MATERIALS ON CANDLESTICK WITH MEAN LABELED AND
+% CONFIDENCE INTERVAL AS ERROR BARS
 function plot_material_ci_filtered(statsTable, idxKeep, varargin)
 % Inputs
 %   statsTable : table with variables: name, zeta_avg_mean, zeta_avg_ci_lo, zeta_avg_ci_hi
@@ -380,14 +394,17 @@ function plot_material_ci_filtered(statsTable, idxKeep, varargin)
         xticklabels([]);
     end
 
-    ylabel('\zeta (AVG of methods)');
+    ylabel('\zeta % (AVG of methods)');
     title(opt.FigureName, 'Interpreter','none');
     legend(h, names, 'Location','southwest', 'Interpreter','none');
+    xlim([0,numel(idxKeep)+1])
+    ylim([0 ,2.5])
 
     hold off;
 end
 
-
+% USES CALCULATED ZETA OR ETA VALUES FOR EACH TRIAL TO FIND CONFIDENCE
+% INTERVALS DYNAMICALLY ADJUSTING FOR NUMBER OF TRIALS
 function [mu, lo, hi, n] = mean_ci95(x)
 x = x(:);
 x = x(~isnan(x));   % ignore NaNs
@@ -410,7 +427,7 @@ lo = mu - tcrit*se;
 hi = mu + tcrit*se;
 end
 
-
+% USES AXIS ACCEL AND SAMPLE FREQ TO CALCULATE ZETA VIA BOTH METHODS.
 function [peak_f, zeta_hp, eta_hp, zeta_log, eta_log, delta_eta] = compute_eta_zeta_like_reference(x, Fs)
 % Make x column
 x = x(:);
@@ -457,8 +474,8 @@ i_right = i_peak + i_right_rel - 1;
 f2 = f(i_right);
 
 df = f2 - f1;
-eta_hp  = df / peak_f;
-zeta_hp = df / (2*peak_f);
+eta_hp  = df / peak_f * 100;
+zeta_hp = df / (2*peak_f) * 100;
 
 %% ==========================
 %  LOGARITHMIC DECREMENT (time domain)
@@ -515,7 +532,7 @@ else
                 deltas = log(A(1:end-1) ./ A(2:end));
                 delta_bar = mean(deltas);
 
-                zeta_log = delta_bar / sqrt(4*pi^2 + delta_bar^2);
+                zeta_log = delta_bar / sqrt(4*pi^2 + delta_bar^2) * 100;
                 eta_log  = 2 * zeta_log;
             end
         end
