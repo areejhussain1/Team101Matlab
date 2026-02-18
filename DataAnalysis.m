@@ -272,6 +272,7 @@ for i = 1:G
 end
 
 title(t, 'Per material: distribution (box plot in blue & black) + mean \pm 95% CI in red');
+%%
 
 %
 % PLOTTING ALL THE MATERIALS AVG ON ONE
@@ -314,7 +315,31 @@ for i = 1:numel(x)
         'LineStyle','none', 'LineWidth',1.5, 'CapSize',10, ...
         'MarkerFaceColor', cols(i,:), 'MarkerEdgeColor', cols(i,:), ...
         'Color', cols(i,:));   % sets the vertical CI line color too
+    % After you've computed mu, lo, hi, x, cols, etc.
+
+yRange = max(hi) - min(lo);
+if yRange == 0 || isnan(yRange)
+    yRange = 1; % fallback
 end
+dy = 0.02 * yRange;   % small vertical offset above the CI cap
+
+for i = 1:N
+    h(i) = errorbar(x(i), mu(i), mu(i)-lo(i), hi(i)-mu(i), 'o', ...
+        'LineStyle','none', 'LineWidth',1.5, 'CapSize',10, ...
+        'MarkerFaceColor', cols(i,:), 'MarkerEdgeColor', cols(i,:), ...
+        'Color', cols(i,:));
+
+    % Vertical label at the top of the error bar
+    text(x(i), lo(i) - dy, string(statsTable.name(i)), ...
+        'Rotation', 90, ...
+        'HorizontalAlignment', 'right', ...
+        'VerticalAlignment', 'middle', ...
+        'Interpreter', 'none', ...
+        'FontSize', 12);
+end
+
+end
+ylim([0, max(hi) + 0.2*yRange]);
 
 xticks(x);
 xticklabels(string(statsTable.name));
