@@ -1,17 +1,13 @@
+
 % This file will Analyze all the experimental data
-% 
+%
 % * look at all the data in data/
-% 
-% * combine (N) different trials of the same material into a [4xN] matrix
-%   or a struct based on naming convention
-% 
+%
 % * run plotLoadedData for each trial, extract damping ratio and other
 %   important aspects
-% 
-% * plot damping ratio as ?bar chart? with subgroups
-%       * Material + thickness
-%       * Same Durometer
-%       * Same Thickness
+%
+% * produce an avg table per material name (grouped by naming convention)
+% * ALSO store every individual trial in a struct array "tests" (Option A)
 
 clear
 clc
@@ -21,13 +17,27 @@ close all
 axisToUse = 'Az';   % 'Ax' 'Ay' 'Az'
 Fs = 6400;          % sample rate (Hz)
 
-
 dataDir = fullfile(pwd,'Data');
 files = dir(fullfile(dataDir,'*.mat'));
 
+
+
+tests = repmat(struct( ...
+    'fileName',"", ...
+    'groupName',"", ...
+    'axis',"", ...
+    'Fs',NaN, ...
+    'fn',NaN, ...
+    'zeta_hp',NaN, ...
+    'eta_hp',NaN, ...
+    'zeta_log',NaN, ...
+    'eta_log',NaN, ...
+    'delta_eta',NaN), numel(files), 1);
+
+% (kept from your original script; not required anymore but harmless)
 results = [];   % [fileIndex  peakFreq  zeta_HP  eta_HP  zeta_log  eta_log]
 
-
+% For summary (your original accumulator approach)
 summary_names = strings(0,1);
 summary_zeta_log = [];
 summary_eta_log  = [];
@@ -43,8 +53,6 @@ sum_zeta_log = 0;
 sum_eta_log  = 0;
 sum_zeta_hp  = 0;
 sum_eta_hp   = 0;
-
-
 
 % LOOP THROUGH FILES
 for k = 1:numel(files)
@@ -73,13 +81,23 @@ for k = 1:numel(files)
             error('Axis must be Ax, Ay, or Az');
     end
 
-
-
     [fn, zeta_HP, eta_HP, zeta_log, eta_log, delta_eta] = compute_eta_zeta_like_reference(x, Fs);
 
-
     fprintf('%s  fn=%.2f Hz  ζHP=%.4f  ζlog=%.4f ηHP=%.4f ηlog=%.4f DeltaLoss%%=%.2f\n', ...
-    fileName, fn, zeta_HP, zeta_log,eta_HP, eta_log, delta_eta);
+        fileName, fn, zeta_HP, zeta_log, eta_HP, eta_log, delta_eta);
+
+
+    tests(k).fileName  = string(fileName);
+    tests(k).groupName = name;
+    tests(k).axis      = string(axisToUse);
+    tests(k).Fs        = Fs;
+
+    tests(k).fn        = fn;
+    tests(k).zeta_hp   = zeta_HP;
+    tests(k).eta_hp    = eta_HP;
+    tests(k).zeta_log  = zeta_log;
+    tests(k).eta_log   = eta_log;
+    tests(k).delta_eta = delta_eta;
 
 
     if currentName == ""
@@ -94,8 +112,8 @@ for k = 1:numel(files)
         summary_eta_log(end+1,1)   = sum_eta_log  / count;
         summary_zeta_hp(end+1,1)   = sum_zeta_hp  / count;
         summary_eta_hp(end+1,1)    = sum_eta_hp   / count;
-        summary_zeta(end+1, 1) = ((sum_zeta_log / count)+(sum_zeta_hp  / count))/2;
-        summary_eta(end+1, 1) = ((sum_eta_log / count)+(sum_eta_hp  / count))/2;
+        summary_zeta(end+1,1)      = ((sum_zeta_log / count) + (sum_zeta_hp / count))/2;
+        summary_eta(end+1,1)       = ((sum_eta_log  / count) + (sum_eta_hp / count))/2;
 
         % Reset accumulators for the new group
         currentName = name;
@@ -103,26 +121,27 @@ for k = 1:numel(files)
         sum_zeta_log = 0; sum_eta_log = 0; sum_zeta_hp = 0; sum_eta_hp = 0;
     end
 
-
     sum_zeta_log = sum_zeta_log + zeta_log;
     sum_eta_log  = sum_eta_log  + eta_log;
     sum_zeta_hp  = sum_zeta_hp  + zeta_HP;
     sum_eta_hp   = sum_eta_hp   + eta_HP;
 
-
     count = count + 1;
+
+    % optional: keep results matrix too
+    results(end+1,:) = [k, fn, zeta_HP, eta_HP, zeta_log, eta_log]; %#ok<SAGROW>
 
 end
 
-
+% finalize last group
 if currentName ~= "" && count > 0
     summary_names(end+1,1)     = currentName;
     summary_zeta_log(end+1,1)  = sum_zeta_log / count;
     summary_eta_log(end+1,1)   = sum_eta_log  / count;
     summary_zeta_hp(end+1,1)   = sum_zeta_hp  / count;
     summary_eta_hp(end+1,1)    = sum_eta_hp   / count;
-    summary_zeta(end+1, 1) = ((sum_zeta_log / count)+(sum_zeta_hp  / count))/2;
-    summary_eta(end+1, 1) = ((sum_eta_log / count)+(sum_eta_hp  / count))/2;
+    summary_zeta(end+1,1)      = ((sum_zeta_log / count) + (sum_zeta_hp / count))/2;
+    summary_eta(end+1,1)       = ((sum_eta_log  / count) + (sum_eta_hp / count))/2;
 end
 
 avgTable = table( ...
@@ -184,8 +203,6 @@ function [peak_f, zeta_hp, eta_hp, zeta_log, eta_log, delta_eta] = compute_eta_z
     eta_hp  = df / peak_f;
     zeta_hp = df / (2*peak_f);
 
-
-
     %% ==========================
     %  LOGARITHMIC DECREMENT (time domain)
     %  ==========================
@@ -232,10 +249,10 @@ function [peak_f, zeta_hp, eta_hp, zeta_log, eta_log, delta_eta] = compute_eta_z
                 keep_neighbor = true(size(A1));
 
                 if numel(A1) >= 3
-                    for k = 2:numel(A1)-1
-                        neighbor_min = min(A1(k-1), A1(k+1));
-                        if A1(k) < alpha * neighbor_min
-                            keep_neighbor(k) = false;
+                    for k2 = 2:numel(A1)-1
+                        neighbor_min = min(A1(k2-1), A1(k2+1));
+                        if A1(k2) < alpha * neighbor_min
+                            keep_neighbor(k2) = false;
                         end
                     end
                 end
@@ -265,3 +282,16 @@ function [peak_f, zeta_hp, eta_hp, zeta_log, eta_log, delta_eta] = compute_eta_z
         delta_eta = abs(eta_hp - eta_log) / eta_log * 100;
     end
 end
+
+
+% fileName  = tests(k).fileName;
+% groupName = tests(k).groupName;
+% axisUsed  = tests(k).axis;
+% Fs_used   = tests(k).Fs;
+% 
+% fn        = tests(k).fn;
+% zeta_hp   = tests(k).zeta_hp;
+% eta_hp    = tests(k).eta_hp;
+% zeta_log  = tests(k).zeta_log;
+% eta_log   = tests(k).eta_log;
+% delta_eta = tests(k).delta_eta;
