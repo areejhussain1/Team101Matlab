@@ -1,16 +1,3 @@
-% This file will Analyze all the experimental data
-%
-% * look at all the data in data/
-%
-% * combine (N) different trials of the same material into a [4xN] matrix
-%   or a struct based on naming convention
-%
-% * run plotLoadedData for each trial, extract damping ratio and other
-%   important aspects
-%
-% * produce an avg table per material name (grouped by naming convention)
-% * ALSO store every individual trial in a struct array "tests" (Option A)
-
 clear
 clc
 close all
@@ -21,7 +8,6 @@ Fs = 6400;          % sample rate (Hz)
 
 dataDir = fullfile(pwd,'Data');
 files = dir(fullfile(dataDir,'*.mat'));
-
 
 R = struct();   % results grouped by name
 
@@ -68,8 +54,6 @@ for k = 1:numel(files)
             error('Axis must be Ax, Ay, or Az');
     end
 
-
-
     [fn, zeta_HP, eta_HP, zeta_log, eta_log, delta_eta] = compute_eta_zeta_like_reference(x, Fs);
 
     key = matlab.lang.makeValidName(name);   % sanitize for fieldname (e.g. "rub", "SCPOLY")
@@ -94,13 +78,10 @@ for k = 1:numel(files)
     R.(key).eta_log(end+1,1)   = eta_log;
     R.(key).delta_eta(end+1,1) = delta_eta;
 
-
     fprintf('%s  fn=%.2f Hz  ζHP=%.4f  ζlog=%.4f ηHP=%.4f ηlog=%.4f DeltaLoss%%=%.2f\n', ...
-        fileName, fn, zeta_HP, zeta_log,eta_HP, eta_log, delta_eta);
-
+        fileName, fn, zeta_HP, zeta_log, eta_HP, eta_log, delta_eta);
 
     if currentName == ""
-        % First file initializes the first group
         currentName = name;
     end
 
@@ -120,17 +101,13 @@ for k = 1:numel(files)
         sum_zeta_log = 0; sum_eta_log = 0; sum_zeta_hp = 0; sum_eta_hp = 0;
     end
 
-
     sum_zeta_log = sum_zeta_log + zeta_log;
     sum_eta_log  = sum_eta_log  + eta_log;
     sum_zeta_hp  = sum_zeta_hp  + zeta_HP;
     sum_eta_hp   = sum_eta_hp   + eta_HP;
 
-
     count = count + 1;
-
 end
-
 
 if currentName ~= "" && count > 0
     summary_names(end+1,1)     = currentName;
@@ -141,12 +118,6 @@ if currentName ~= "" && count > 0
     summary_zeta(end+1, 1) = ((sum_zeta_log / count)+(sum_zeta_hp  / count))/2;
     summary_eta(end+1, 1) = ((sum_eta_log / count)+(sum_eta_hp  / count))/2;
 end
-
-%avgTable = table( ...
-%    summary_names, summary_zeta_log, summary_eta_log, summary_zeta_hp, summary_eta_hp, summary_zeta, summary_eta, ...
-%    'VariableNames', {'name','zeta_log','eta_log','zeta_hp','eta_hp',
-%    'zeta', 'eta'} );%
-%disp(avgTable);
 
 keys = string(fieldnames(R));
 nG = numel(keys);
@@ -212,7 +183,6 @@ statsTable = table( ...
     'zeta_hp_mean','zeta_hp_ci_lo','zeta_hp_ci_hi', ...
     'zeta_log_mean','zeta_log_ci_lo','zeta_log_ci_hi', ...
     'avg_n','zeta_avg_mean','zeta_avg_ci_lo','zeta_avg_ci_hi','zeta_avg_ci_width' } );
-%%
 
 disp(statsTable);
 
@@ -250,16 +220,12 @@ for i = 1:G
     nexttile;
     hold on; grid on;
 
-    % ---- Numeric grouping (robust; avoids categorical xticks issues) ----
     vals = [zhp; zlog; zavg];
     g    = [ones(numel(zhp),1); 2*ones(numel(zlog),1); 3*ones(numel(zavg),1)];
 
     boxchart(g, vals);
-
-
     set(gca, 'XTick', 1:3, 'XTickLabel', {'HP','LOG','AVG'});
 
-    % Overlay mean ± 95% CI
     x = 1:3;
     errorbar(x, mus, mus-los, his-mus, 'r', ...
         'LineStyle','none', 'LineWidth',1.3, 'CapSize',10);
@@ -271,105 +237,155 @@ for i = 1:G
     hold off;
 end
 
-title(t, 'Per material: distribution (box plot in blue & black) + mean \pm 95% CI in red');
-%%
+title(t, 'Per material: distribution (box plot) + mean \pm 95% CI');
 
 %
-% PLOTTING ALL THE MATERIALS AVG ON ONE
+% PLOTTING ALL THE MATERIALS AVG ON ONE (FILTERABLE VIA INDEX INPUT)
 %
 
-figure('Name','All materials: AVG mean ± 95% CI (sorted)');
-hold on; grid on;
+% Example filter usage:
+%   idxKeep = 1:5;                          % first 5 materials in statsTable
+%   idxKeep = statsTable.avg_n >= 5;        % logical mask example
+%   idxKeep = ~ismember(string(statsTable.name), ["rub","SCPOLY"]); % by name
+idxKeep = 1:height(statsTable);  % <-- change this to filter
 
-x  = 1:height(statsTable);
-mu = statsTable.zeta_avg_mean;
-lo = statsTable.zeta_avg_ci_lo;
-hi = statsTable.zeta_avg_ci_hi;
+plot_material_ci_filtered(statsTable, idxKeep, ...
+    'FigureName', 'All materials (filtered): AVG mean \pm 95% CI (sorted)', ...
+    'BlockSize', 7, ...
+    'ShowXTicks', false, ...
+    'FontSizeName', 12, ...
+    'FontSizeMu', 8);
 
-% Create a set of distinct colors (one per material)
-N = numel(x);
-block = 7;  % switch palette every 7
 
-palettes = {@lines, @parula, @turbo, @hsv, @spring, @summer, @autumn, @winter, @cool, @hot, @copper};
+%% =========================
+% FUNCTIONS
+%% =========================
 
-cols = zeros(N,3);
-idx = 1;
-p = 1;
+function plot_material_ci_filtered(statsTable, idxKeep, varargin)
+% Inputs
+%   statsTable : table with variables: name, zeta_avg_mean, zeta_avg_ci_lo, zeta_avg_ci_hi
+%   idxKeep    : indices (e.g. [1 3 7]) OR logical mask (height(statsTable)x1)
+%
+% Name-Value options (optional)
+%   'FigureName'  : figure name (default: 'Filtered materials: AVG mean ± 95% CI')
+%   'BlockSize'   : palette block size (default: 7)
+%   'ShowXTicks'  : true/false (default: false; names are annotated near points)
+%   'FontSizeName': font size for name labels (default: 10)
+%   'FontSizeMu'  : font size for mean callouts (default: 8)
 
-while idx <= N
-    m = min(block, N - idx + 1);          % how many colors we still need in this block
-    cmap = palettes{p}(max(block, m));     % generate at least 'block' colors for consistent look
-    cols(idx:idx+m-1, :) = cmap(1:m, :);   % take first m colors
-    idx = idx + m;
-    p = p + 1;
-    if p > numel(palettes)
-        p = 1; % wrap if you have tons of materials
+    % ---- Parse options ----
+    p = inputParser;
+    p.addParameter('FigureName', 'Filtered materials: AVG mean \pm 95% CI', @(s)isstring(s)||ischar(s));
+    p.addParameter('BlockSize', 7, @(x)isnumeric(x)&&isscalar(x)&&x>=1);
+    p.addParameter('ShowXTicks', false, @(x)islogical(x)&&isscalar(x));
+    p.addParameter('FontSizeName', 10, @(x)isnumeric(x)&&isscalar(x));
+    p.addParameter('FontSizeMu', 8, @(x)isnumeric(x)&&isscalar(x));
+    p.parse(varargin{:});
+    opt = p.Results;
+
+    % ---- Normalize idxKeep to numeric indices ----
+    if islogical(idxKeep)
+        idxKeep = find(idxKeep);
     end
-end
+    idxKeep = idxKeep(:);
 
+    if isempty(idxKeep)
+        warning('plot_material_ci_filtered:EmptySelection', 'idxKeep is empty. Nothing to plot.');
+        return
+    end
 
-h = gobjects(numel(x),1);
+    % ---- Filter and sort within the selection ----
+    T = statsTable(idxKeep, :);
+    T = sortrows(T, 'zeta_avg_mean', 'descend');
 
-for i = 1:numel(x)
-    h(i) = errorbar(x(i), mu(i), mu(i)-lo(i), hi(i)-mu(i), 'o', ...
-        'LineStyle','none', 'LineWidth',1.5, 'CapSize',10, ...
-        'MarkerFaceColor', cols(i,:), 'MarkerEdgeColor', cols(i,:), ...
-        'Color', cols(i,:));   % sets the vertical CI line color too
-    % After you've computed mu, lo, hi, x, cols, etc.
+    % ---- Extract ----
+    names = string(T.name);
+    mu = T.zeta_avg_mean;
+    lo = T.zeta_avg_ci_lo;
+    hi = T.zeta_avg_ci_hi;
+
+    N = height(T);
+    x = (1:N)';
+
+    % ---- Colors: switch palette every BlockSize ----
+    block = opt.BlockSize;
+    palettes = {@lines, @parula, @turbo, @hsv, @spring, @summer, @autumn, @winter, @cool, @hot, @copper};
+
+    cols = zeros(N,3);
+    idx = 1;
+    pal_i = 1;
+
+    while idx <= N
+        m = min(block, N - idx + 1);
+        cmap = palettes{pal_i}(max(block, m));
+        cols(idx:idx+m-1, :) = cmap(1:m, :);
+
+        idx = idx + m;
+        pal_i = pal_i + 1;
+        if pal_i > numel(palettes)
+            pal_i = 1;
+        end
+    end
+
+    % ---- Plot ----
+    figure('Name', opt.FigureName);
+    hold on; grid on;
+
+    h = gobjects(N,1);
 
     yRange = max(hi) - min(lo);
-    if yRange == 0 || isnan(yRange)
-        yRange = 1; % fallback
+    if ~isfinite(yRange) || yRange == 0
+        yRange = 1;
     end
-    dy = 0.02 * yRange;   % small vertical offset above the CI cap
+    dy_name = 0.02 * yRange;   % offset for bottom name label
+    dx_mu   = 0.08;            % x offset for mean callout
+    dy_mu   = 0.00 * yRange;   % y offset for mean callout
 
-    for i = 1:N
-        h(i) = errorbar(x(i), mu(i), mu(i)-lo(i), hi(i)-mu(i), 'o', ...
+    for k = 1:N
+        h(k) = errorbar(x(k), mu(k), mu(k)-lo(k), hi(k)-mu(k), 'o', ...
             'LineStyle','none', 'LineWidth',1.5, 'CapSize',10, ...
-            'MarkerFaceColor', cols(i,:), 'MarkerEdgeColor', cols(i,:), ...
-            'Color', cols(i,:));
+            'MarkerFaceColor', cols(k,:), 'MarkerEdgeColor', cols(k,:), ...
+            'Color', cols(k,:));
 
-        % Vertical label at the bottom of the error bar
-        text(x(i), lo(i) - dy, string(statsTable.name(i)), ...
+        % Name label at bottom of CI
+        text(x(k), lo(k) - dy_name, names(k), ...
             'Rotation', 90, ...
             'HorizontalAlignment', 'right', ...
             'VerticalAlignment', 'middle', ...
             'Interpreter', 'none', ...
-            'FontSize', 12);
-        % --- Mean value callout (near the marker at y = mu(i)) ---
-        dx = 0.08;                 % horizontal offset in x units (tweak)
-        dy_mu = 0.00 * yRange;     % vertical offset (tweak)
+            'FontSize', opt.FontSizeName);
 
-        text(x(i) + dx, mu(i) + dy_mu, sprintf('%.4f', mu(i)), ...
+        % Mean callout near marker
+        text(x(k) + dx_mu, mu(k) + dy_mu, sprintf('%.4f', mu(k)), ...
             'Interpreter','none', ...
-            'FontSize', 8, ...
-            'Color', cols(i,:), ...
+            'FontSize', opt.FontSizeMu, ...
+            'Color', cols(k,:), ...
             'BackgroundColor', 'w', ...
-            'EdgeColor', cols(i,:), ...
+            'EdgeColor', cols(k,:), ...
             'Margin', 2, ...
             'HorizontalAlignment', 'left', ...
             'VerticalAlignment', 'middle');
-
     end
 
+    ylim([min(lo) - 0.15*yRange, max(hi) + 0.15*yRange]);
+
+    if opt.ShowXTicks
+        xticks(x);
+        xticklabels(names);
+        xtickangle(45);
+        ax = gca;
+        ax.TickLabelInterpreter = 'none';
+    else
+        xticks(x);
+        xticklabels([]);
+    end
+
+    ylabel('\zeta (AVG of methods)');
+    title(opt.FigureName, 'Interpreter','none');
+    legend(h, names, 'Location','southwest', 'Interpreter','none');
+
+    hold off;
 end
-ylim([0, max(hi) + 0.2*yRange]);
-
-xticks(x);
-xticklabels(string(statsTable.name));
-xtickangle(45);
-ax = gca;
-ax.TickLabelInterpreter = 'none';
-
-
-
-ylabel('\zeta (AVG of methods)');
-title('All materials (sorted): AVG mean \pm 95% CI');
-
-legend(h, string(statsTable.name), 'Location','southwest', 'Interpreter','none');
-
-hold off;
-
 
 
 function [mu, lo, hi, n] = mean_ci95(x)
@@ -433,7 +449,6 @@ peak_f = f(i_peak);
 hp_mag = max_mag / sqrt(2);
 
 % Reference half-power crossing selection
-% NOTE: left uses hp_mag*0.95 in the reference
 [~, i_left] = min(abs(P1(1:i_peak) - hp_mag*0.95));
 f1 = f(i_left);
 
@@ -445,27 +460,20 @@ df = f2 - f1;
 eta_hp  = df / peak_f;
 zeta_hp = df / (2*peak_f);
 
-
-
 %% ==========================
 %  LOGARITHMIC DECREMENT (time domain)
 %  ==========================
-% Reference uses signed peaks on x_detrend, not abs envelope
-
 if peak_f <= 0 || isnan(peak_f)
     zeta_log = NaN; eta_log = NaN;
 else
-    % Estimate period from peak frequency
     Tn = 1 / peak_f;
 
-    % Peak detection: enforce min spacing
     minPeakDist_sec = 0.5 * Tn;
     [x_peaks, locs] = findpeaks(x_detrend, t_sec, 'MinPeakDistance', minPeakDist_sec);
 
     if numel(x_peaks) < 3
         zeta_log = NaN; eta_log = NaN;
     else
-        % --- Handle clipping at the start (reference logic) ---
         clip_level = max(abs(x_detrend));
         tol = 1e-3 * clip_level;
 
@@ -480,7 +488,6 @@ else
             locs_u    = locs;
         end
 
-        % --- 1) Apply magnitude threshold (reference uses 5 g in your pasted code) ---
         A_mag = abs(x_peaks_u);
         keep_big = A_mag >= 5;
         A1 = A_mag(keep_big);
@@ -488,7 +495,6 @@ else
         if numel(A1) < 2
             zeta_log = NaN; eta_log = NaN;
         else
-            % --- 2) Remove neighbor-outlier peaks (reference alpha=0.8) ---
             alpha = 0.8;
             keep_neighbor = true(size(A1));
 
@@ -519,7 +525,6 @@ end
 %% ==========================
 %  ERROR CALC (reference)
 %  ==========================
-% reference: delta_eta = abs(eta_hp - eta_log)/eta_log * 100;
 if isnan(eta_log) || eta_log == 0
     delta_eta = NaN;
 else
