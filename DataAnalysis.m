@@ -212,9 +212,124 @@ statsTable = table( ...
       'zeta_hp_mean','zeta_hp_ci_lo','zeta_hp_ci_hi', ...
       'zeta_log_mean','zeta_log_ci_lo','zeta_log_ci_hi', ...
       'avg_n','zeta_avg_mean','zeta_avg_ci_lo','zeta_avg_ci_hi','zeta_avg_ci_width' } );
+%% 
 
 disp(statsTable);
 
+%
+% PLOTTING EACH MATERIAL ON SUBPLOT, ERROR BARS FOR THE C.I. FOR THE MEAN
+%
+
+% --- Sort materials by AVG mean (highest to lowest) ---
+statsTable = sortrows(statsTable, 'zeta_avg_mean', 'descend');
+
+keys_sorted = string(statsTable.name);
+G = numel(keys_sorted);
+
+% --- Choose subplot grid ---
+nCols = ceil(sqrt(G));
+nRows = ceil(G / nCols);
+
+figure('Name','Per-material ζ (HP/LOG/AVG) distributions + mean±95%CI');
+t = tiledlayout(nRows, nCols, 'TileSpacing','compact', 'Padding','compact');
+
+for i = 1:G
+    key = keys_sorted(i);
+
+    % Distributions from struct
+    zhp  = R.(key).zeta_HP(:);
+    zlog = R.(key).zeta_log(:);
+    zavg = mean([zhp, zlog], 2, 'omitnan');   % per-sample average
+
+    % Precomputed mean/CI from statsTable (no recompute)
+    row = statsTable(i, :);
+    mus = [row.zeta_hp_mean,  row.zeta_log_mean,  row.zeta_avg_mean];
+    los = [row.zeta_hp_ci_lo, row.zeta_log_ci_lo, row.zeta_avg_ci_lo];
+    his = [row.zeta_hp_ci_hi, row.zeta_log_ci_hi, row.zeta_avg_ci_hi];
+
+    nexttile;
+    hold on; grid on;
+
+    % ---- Numeric grouping (robust; avoids categorical xticks issues) ----
+    vals = [zhp; zlog; zavg];
+    g    = [ones(numel(zhp),1); 2*ones(numel(zlog),1); 3*ones(numel(zavg),1)];
+
+        boxchart(g, vals);
+  
+
+    set(gca, 'XTick', 1:3, 'XTickLabel', {'HP','LOG','AVG'});
+
+    % Overlay mean ± 95% CI
+    x = 1:3;
+    errorbar(x, mus, mus-los, his-mus, 'r', ...
+        'LineStyle','none', 'LineWidth',1.3, 'CapSize',10);
+    plot(x, mus, 'kd', 'MarkerFaceColor','r', 'MarkerSize',6);
+
+    ylabel('\zeta');
+    title(sprintf('%s | AVG=%.4f', key, row.zeta_avg_mean), 'Interpreter','none');
+
+    hold off;
+end
+
+title(t, 'Per material: distribution (box plot in blue & black) + mean \pm 95% CI in red');
+
+%
+% PLOTTING ALL THE MATERIALS AVG ON ONE
+%
+
+figure('Name','All materials: AVG mean ± 95% CI (sorted)');
+hold on; grid on;
+
+x  = 1:height(statsTable);
+mu = statsTable.zeta_avg_mean;
+lo = statsTable.zeta_avg_ci_lo;
+hi = statsTable.zeta_avg_ci_hi;
+
+% Create a set of distinct colors (one per material)
+N = numel(x);
+block = 7;  % switch palette every 7
+
+palettes = {@lines, @parula, @turbo, @hsv, @spring, @summer, @autumn, @winter, @cool, @hot, @copper};
+
+cols = zeros(N,3);
+idx = 1;
+p = 1;
+
+while idx <= N
+    m = min(block, N - idx + 1);          % how many colors we still need in this block
+    cmap = palettes{p}(max(block, m));     % generate at least 'block' colors for consistent look
+    cols(idx:idx+m-1, :) = cmap(1:m, :);   % take first m colors
+    idx = idx + m;
+    p = p + 1;
+    if p > numel(palettes)
+        p = 1; % wrap if you have tons of materials
+    end
+end
+
+
+h = gobjects(numel(x),1);
+
+for i = 1:numel(x)
+    h(i) = errorbar(x(i), mu(i), mu(i)-lo(i), hi(i)-mu(i), 'o', ...
+        'LineStyle','none', 'LineWidth',1.5, 'CapSize',10, ...
+        'MarkerFaceColor', cols(i,:), 'MarkerEdgeColor', cols(i,:), ...
+        'Color', cols(i,:));   % sets the vertical CI line color too
+end
+
+xticks(x);
+xticklabels(string(statsTable.name));
+xtickangle(45);
+ax = gca;
+ax.TickLabelInterpreter = 'none';
+
+
+
+ylabel('\zeta (AVG of methods)');
+title('All materials (sorted): AVG mean \pm 95% CI');
+
+legend(h, string(statsTable.name), 'Location','southwest', 'Interpreter','none');
+
+hold off;
 
 
 
