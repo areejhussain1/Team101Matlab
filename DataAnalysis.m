@@ -8,10 +8,8 @@
 % * run plotLoadedData for each trial, extract damping ratio and other
 %   important aspects
 % 
-% * plot damping ratio as ?bar chart? with subgroups
-%       * Material + thickness
-%       * Same Durometer
-%       * Same Thickness
+% * produce an avg table per material name (grouped by naming convention)
+% * ALSO store every individual trial in a struct array "tests" (Option A)
 
 clear
 clc
@@ -21,11 +19,9 @@ close all
 axisToUse = 'Az';   % 'Ax' 'Ay' 'Az'
 Fs = 6400;          % sample rate (Hz)
 
-
 dataDir = fullfile(pwd,'Data');
 files = dir(fullfile(dataDir,'*.mat'));
 
-results = [];   % [fileIndex  peakFreq  zeta_HP  eta_HP  zeta_log  eta_log]
 
 R = struct();   % results grouped by name
 
@@ -44,8 +40,6 @@ sum_zeta_log = 0;
 sum_eta_log  = 0;
 sum_zeta_hp  = 0;
 sum_eta_hp   = 0;
-
-
 
 % LOOP THROUGH FILES
 for k = 1:numel(files)
