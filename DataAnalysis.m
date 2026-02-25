@@ -193,6 +193,51 @@ disp(statsTable);
 % --- Sort materials by AVG mean (highest to lowest) ---
 statsTable = sortrows(statsTable, 'zeta_avg_mean', 'descend');
 
+
+%% =========================
+% PLOTS: one figure per material TYPE vs bare
+%% =========================
+
+namesAll = string(statsTable.name);
+
+% --- Identify "type" as prefix before first underscore (fallback: full name) ---
+types = extractBefore(namesAll, "_");
+types(types == "") = namesAll(types == "");   % if no underscore, use full name
+
+% Ensure we always have a bare bar to compare against (if present)
+idxBare = ismember(lower(namesAll), "bare");
+
+if ~any(idxBare)
+    warning('No "bare" row found in statsTable.name. Plots will be made without bare.');
+end
+
+% Unique types, excluding "bare" itself
+uniqTypes = unique(types, 'stable');
+uniqTypes = uniqTypes(~ismember(lower(uniqTypes), "bare"));
+
+for ti = 1:numel(uniqTypes)
+    thisType = uniqTypes(ti);
+
+    idxType = (types == thisType);
+
+    % Skip empty types (shouldn't happen, but safe)
+    if ~any(idxType)
+        continue
+    end
+
+    % Keep this type + bare
+    idxKeep = idxType | idxBare;
+
+    plot_material_ci_filtered(statsTable, idxKeep, ...
+        'FigureName', sprintf('%s materials vs bare: AVG mean \\pm 95%% CI (sorted)', thisType), ...
+        'BlockSize', 7, ...
+        'ShowXTicks', false, ...
+        'FontSizeName', 12, ...
+        'FontSizeMu', 8);
+end
+
+
+
 keys_sorted = string(statsTable.name);
 G = numel(keys_sorted);
 
