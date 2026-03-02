@@ -70,7 +70,7 @@ plot(f, P1, 'LineWidth', 1);
 grid on;
 hold on;
 xlabel('Frequency (Hz)');
-ylabel('|X(f)| (g \cdot windowed units)');
+ylabel('|X(f)| (g)');
 title(sprintf('FFT of %s', axisLabel));
 
 if ~isempty(maxFreq)
