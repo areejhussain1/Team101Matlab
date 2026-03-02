@@ -271,7 +271,7 @@ else
     end
 
     % --- 1) Apply 10 g magnitude threshold ---
-    A_mag = abs(x_peaks_u);                  % magnitude in g
+    A_mag = x_peaks_u;                  % magnitude in g, was abs(x_peaks_u)
     keep_big = A_mag >= 5;                  % only peaks >= 10 g
     A1       = A_mag(keep_big);
     locs1    = locs_u(keep_big);

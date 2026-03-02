@@ -564,7 +564,7 @@ else
             locs_u    = locs;
         end
 
-        A_mag = abs(x_peaks_u);
+        A_mag = x_peaks_u; % was abs(x_peaks_u)
         keep_big = A_mag >= 5;
         A1 = A_mag(keep_big);
 
