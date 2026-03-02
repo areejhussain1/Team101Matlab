@@ -20,8 +20,8 @@ nperseg = min(nperseg, L);
 
 % Plot PSD using pwelch
 % figure;
-[pxx,f,pxxc] = pwelch(az_g, window, noverlap, nfft, Fs,'ConfidenceLevel',.95);
-%[pxx,f,pxxc] = pwelch(az_g, nperseg, noverlap, nfft, Fs);
+%[pxx,f,pxxc] = pwelch(az_g, window, noverlap, nfft, Fs,'ConfidenceLevel',.95);
+[pxx,f,pxxc] = pwelch(az_g, nperseg, noverlap, nfft, Fs,'ConfidenceLevel',.95);
 % grid on;
 % title('Power Spectral Density of Acceleration Signal');
 % xlabel('Frequency (Hz)');

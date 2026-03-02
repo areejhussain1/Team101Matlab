@@ -152,7 +152,7 @@ for i = 1:nG
     nameForPlot = k;   % or string(key)
 
     if ~isempty(axisData)
-        psdplotdb(axisData, nameForPlot);
+        psdplot(axisData, nameForPlot);
     end
     
 end
