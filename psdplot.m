@@ -1,4 +1,5 @@
-close all
+function psdplot(az_g,name)
+%close all
 
 % Acceleration data vector
 % Replace this with your actual data
@@ -19,8 +20,8 @@ nperseg = min(nperseg, L);
 
 % Plot PSD using pwelch
 % figure;
-%[pxx,f,pxxc] = pwelch(az_g, window, noverlap, nfft, Fs,'ConfidenceLevel',.95);
-[pxx,f,pxxc] = pwelch(az_g, nperseg, noverlap, nfft, Fs);
+[pxx,f,pxxc] = pwelch(az_g, window, noverlap, nfft, Fs,'ConfidenceLevel',.95);
+%[pxx,f,pxxc] = pwelch(az_g, nperseg, noverlap, nfft, Fs);
 % grid on;
 % title('Power Spectral Density of Acceleration Signal');
 % xlabel('Frequency (Hz)');
@@ -33,7 +34,7 @@ hold on;
 plot(f,pxxc,'-.')
 xlim([0 500]);
 
-title('Power Spectral Density of Acceleration Signal with ±95% confidence Bounds');
+title("PSD of " + name + " with ±95% confidence Bounds");
 xlabel('Frequency (Hz)');
 ylabel('PSD (G^2/Hz)');
 
@@ -42,17 +43,18 @@ ax = gca;
 ax.XAxis.Exponent = 0;
 
 % PLOT IN DB
-figure;
-plot(f,10*log10(pxx), 'LineWidth', 1);
-grid on;
-hold on;
-plot(f,10*log10(pxxc),'-.')
-xlim([0 500]);
-
-title('Power Spectral Density of Acceleration Signal with ±95% confidence Bounds');
-xlabel('Frequency (Hz)');
-ylabel('PSD (dB/Hz)');
-
-% Force MATLAB not to use ×10^n axis notation
-ax = gca;
-ax.XAxis.Exponent = 0;
+% figure;
+% plot(f,10*log10(pxx), 'LineWidth', 1);
+% grid on;
+% hold on;
+% plot(f,10*log10(pxxc),'-.')
+% xlim([0 500]);
+% 
+% title('Power Spectral Density of Acceleration Signal with ±95% confidence Bounds');
+% xlabel('Frequency (Hz)');
+% ylabel('PSD (dB/Hz)');
+% 
+% % Force MATLAB not to use ×10^n axis notation
+% ax = gca;
+% ax.XAxis.Exponent = 0;
+% end

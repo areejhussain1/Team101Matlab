@@ -38,6 +38,8 @@ for k = 1:numel(files)
     filePath = fullfile(dataDir,fileName);
 
     S = load(filePath);
+    
+    % psdplotdb(S.az_g(:),name)
 
     % Stack data
     data = [S.t_sec(:), S.ax_g(:), S.ay_g(:), S.az_g(:)];
@@ -67,6 +69,7 @@ for k = 1:numel(files)
         R.(key).zeta_log   = [];
         R.(key).eta_log    = [];
         R.(key).delta_eta  = [];
+        R.(key).axisData   = [];
     end
 
     % Append one row/entry for this file
@@ -77,6 +80,7 @@ for k = 1:numel(files)
     R.(key).zeta_log(end+1,1)  = zeta_log;
     R.(key).eta_log(end+1,1)   = eta_log;
     R.(key).delta_eta(end+1,1) = delta_eta;
+    R.(key).axisData = [R.(key).axisData; x(:)];
 
     fprintf('%s  fn=%.2f Hz  ζHP=%.4f  ζlog=%.4f ηHP=%.4f ηlog=%.4f DeltaLoss%%=%.2f\n', ...
         fileName, fn, zeta_HP, zeta_log, eta_HP, eta_log, delta_eta);
@@ -123,6 +127,7 @@ keys = string(fieldnames(R));
 nG = numel(keys);
 
 summary_names = strings(nG,1);
+summary_fn = nan(nG,1);
 summary_zeta_log = nan(nG,1);
 summary_eta_log  = nan(nG,1);
 summary_zeta_hp  = nan(nG,1);
@@ -134,6 +139,7 @@ for i = 1:nG
     k = keys(i);
     summary_names(i)    = k;
 
+    summary_fn(i) = mean(R.(k).fn, 'omitnan');
     summary_zeta_log(i) = mean(R.(k).zeta_log, 'omitnan');
     summary_eta_log(i)  = mean(R.(k).eta_log,  'omitnan');
     summary_zeta_hp(i)  = mean(R.(k).zeta_HP,  'omitnan');
@@ -141,11 +147,19 @@ for i = 1:nG
 
     summary_zeta(i) = mean([summary_zeta_log(i), summary_zeta_hp(i)], 'omitnan');
     summary_eta(i)  = mean([summary_eta_log(i),  summary_eta_hp(i)],  'omitnan');
+    
+    axisData = R.(k).axisData;
+    nameForPlot = k;   % or string(key)
+
+    if ~isempty(axisData)
+        psdplotdb(axisData, nameForPlot);
+    end
+    
 end
 
 avgTable = table( ...
-    summary_names, summary_zeta_log, summary_eta_log, summary_zeta_hp, summary_eta_hp, summary_zeta, summary_eta, ...
-    'VariableNames', {'name','zeta_log','eta_log','zeta_hp','eta_hp','zeta','eta'} );
+    summary_names, summary_zeta_log, summary_eta_log, summary_zeta_hp, summary_eta_hp, summary_zeta, summary_eta, summary_fn, ...
+    'VariableNames', {'name','zeta_log','eta_log','zeta_hp','eta_hp','zeta','eta','fn'} );
 
 disp(avgTable);
 
@@ -213,7 +227,7 @@ end
 
 % Unique types, excluding "bare" itself
 uniqTypes = unique(types, 'stable');
-uniqTypes = uniqTypes(~ismember(lower(uniqTypes), "bare"));
+% uniqTypes = uniqTypes(~ismember(lower(uniqTypes), "bare"));
 
 for ti = 1:numel(uniqTypes)
     thisType = uniqTypes(ti);
@@ -229,7 +243,7 @@ for ti = 1:numel(uniqTypes)
     idxKeep = idxType | idxBare;
 
     plot_material_ci_filtered(statsTable, idxKeep, ...
-        'FigureName', sprintf('%s materials vs bare: AVG mean \\pm 95%% CI (sorted)', thisType), ...
+        'FigureName', sprintf('%s materials vs bare: AVG mean ±95%% CI (sorted)', thisType), ...
         'BlockSize', 7, ...
         'ShowXTicks', false, ...
         'FontSizeName', 12, ...
@@ -282,7 +296,7 @@ for i = 1:G
     hold off;
 end
 
-title(t, 'Per material: distribution (box plot) + mean \pm 95% CI');
+title(t, 'Per material: distribution (box plot) + mean ±95% CI');
 
 %
 % PLOTTING ALL THE MATERIALS AVG ON ONE (FILTERABLE VIA INDEX INPUT)
@@ -295,7 +309,7 @@ title(t, 'Per material: distribution (box plot) + mean \pm 95% CI');
 idxKeep = 1:height(statsTable);  % <-- change this to filter
 
 plot_material_ci_filtered(statsTable, idxKeep, ...
-    'FigureName', 'All materials (filtered): AVG mean \pm 95% CI (sorted)', ...
+    'FigureName', 'All materials (filtered): AVG mean ±95% CI (sorted)', ...
     'BlockSize', 7, ...
     'ShowXTicks', false, ...
     'FontSizeName', 12, ...
@@ -304,14 +318,14 @@ plot_material_ci_filtered(statsTable, idxKeep, ...
 
 
 
-idxKeep = ismember(string(statsTable.name), ["AEAR_R012","AEAR_SD125","AEAR_SD40AL","AEAR_blue_cured","AEAR_blue","bare"]);  
-
-plot_material_ci_filtered(statsTable, idxKeep, ...
-    'FigureName', 'All AEARO Materials: AVG mean \pm 95% CI (sorted)', ...
-    'BlockSize', 7, ...
-    'ShowXTicks', false, ...
-    'FontSizeName', 12, ...
-    'FontSizeMu', 8);
+% idxKeep = ismember(string(statsTable.name), ["AEAR_R012","AEAR_SD125","AEAR_SD40AL","AEAR_blue_cured","AEAR_blue","bare"]);  
+% 
+% plot_material_ci_filtered(statsTable, idxKeep, ...
+%     'FigureName', 'All AEARO Materials: AVG mean ±95% CI (sorted)', ...
+%     'BlockSize', 7, ...
+%     'ShowXTicks', false, ...
+%     'FontSizeName', 12, ...
+%     'FontSizeMu', 8);
 
 
 %% =========================
@@ -334,7 +348,7 @@ function plot_material_ci_filtered(statsTable, idxKeep, varargin)
 
     % ---- Parse options ----
     p = inputParser;
-    p.addParameter('FigureName', 'Filtered materials: AVG mean \pm 95% CI', @(s)isstring(s)||ischar(s));
+    p.addParameter('FigureName', 'Filtered materials: AVG mean ±95% CI', @(s)isstring(s)||ischar(s));
     p.addParameter('BlockSize', 7, @(x)isnumeric(x)&&isscalar(x)&&x>=1);
     p.addParameter('ShowXTicks', false, @(x)islogical(x)&&isscalar(x));
     p.addParameter('FontSizeName', 10, @(x)isnumeric(x)&&isscalar(x));
