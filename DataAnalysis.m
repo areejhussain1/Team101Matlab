@@ -457,7 +457,7 @@ function plot_material_ci_filtered(statsTable, idxKeep, varargin)
     title(opt.FigureName, 'Interpreter','none');
     legend(h, names, 'Location','southwest', 'Interpreter','none');
     xlim([0,numel(idxKeep)+1])
-    ylim([0 ,2.5])
+    ylim([0 ,2.8])
 
     hold off;
 end
