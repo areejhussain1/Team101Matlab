@@ -1,4 +1,4 @@
-clc; close all; clear
+    clc; close all; clear
 
 %function [t_sec, ax_g, ay_g, az_g] = captureAccelChunk()
     % === USER SETTINGS ===

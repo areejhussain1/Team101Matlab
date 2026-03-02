@@ -1,15 +1,15 @@
 %% Senior Design FRF Plot
-%clear
-%clc
-%close all
+clear
+clc
+close all
 
-data = readmatrix('11_18_1_undamped.txt');
+data = readmatrix('02_24_damp_polyuk2_2.txt');
 %data = readmatrix("bare_bar_freq_vs_accel.txt");
 data = data(2:end, :);
 
 freq = data(:,1);
 mag = data(:,2);
-%dB = 20*log10(abs(mag));
+dB = 20*log10(abs(mag));
 
 
 [max_mag, i] = max(mag);
@@ -26,8 +26,8 @@ f2 = freq(i_right);
 
 
 df   = f2 - f1;
-eta  = df / peak_f; 
-zeta = df / (2*peak_f);
+eta  = df / peak_f*100; 
+zeta = df / (2*peak_f)*100;
 
 fprintf('Loss Factor = %.4f\n', eta);
 fprintf('Damping Ratio = %.4f\n', zeta);
